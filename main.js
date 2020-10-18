@@ -1,147 +1,196 @@
-const pointAmount = 100;
-const transitionLength = 200;
-const neighborCount = 7;
-const wrapper = $('#container');
+const canvas = document.querySelector('canvas');
+const ctx = canvas.getContext('2d');
+const width = canvas.width;
+const height = canvas.height;
 
-for (let i = 0; i < pointAmount; ++i)
+let points = [];
+
+const margin = 100;
+function getRandomPoints(amount)
 {
-	wrapper.append('<div class="point"></div>')
+	let ps = [];
+
+	for (let i = 0; i < amount; ++i)
+	{
+		const left = Math.random() * (width - margin) + margin / 2;
+		const top = Math.random() * (height - margin) + margin / 2;
+		ps.push({left: left, top: top});
+	}
+	return ps;
 }
 
-function getNearestNeighbors(point, children)
+function drawLineBetweenPoints(p1, p2)
 {
-	point = $(point);
-	const originalLeft = parseFloat(point.css('left'));
-	const originalTop = parseFloat(point.css('top'));
+	ctx.beginPath();
+	ctx.moveTo(p1.left, p1.top);
+	ctx.lineTo(p2.left, p2.top);
+	ctx.stroke();
+}
 
-	let nearPoints = {}; // distance: point format
+function generateNet()
+{
+	ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-	for (let i = 0; i < children.length; ++i)
+	for (let i = 0; i < points.length; ++i)
 	{
-		const elem = $(children[i]);
-		const left = parseFloat(elem.css('left'));
-		const top = parseFloat(elem.css('top'));
-
-		const diffX = left - originalLeft;
-		const diffY = top - originalTop;
-		const distance = Math.sqrt(Math.pow(diffX, 2) + Math.pow(diffY, 2));
-
-		if (distance == 0) continue;
-
-		if (Object.keys(nearPoints).length < neighborCount)
+		for (let j = 0; j < points.length; ++j)
 		{
-			nearPoints[distance.toString()] = elem;
-		}
-		else
-		{
-			for (let j = Object.keys(nearPoints).length - 1; j >= 0; --j)
+			if (j != i)
 			{
-				const dist = Object.keys(nearPoints)[j];
-				if (parseFloat(dist) > distance)
-				{
-					nearPoints[distance.toString()] = elem;
-					delete nearPoints[dist];
-					break;
-				}
+				drawLineBetweenPoints(points[i], points[j]);
 			}
 		}
 	}
-
-	return nearPoints;
 }
 
-let lineCount = 0;
-function drawLineTo(a, b)
+function getExpandedPoints(step)
 {
-	a = $(a);
-	b = $(b);
-	const fromLeft = parseFloat(a.css('left'));
-	const fromTop = parseFloat(a.css('top'));
-	const toLeft = parseFloat(b.css('left'));
-	const toTop = parseFloat(b.css('top'));
-	const diffX = Math.abs(fromLeft - toLeft);
-	const diffY = Math.abs(fromTop - toTop);
-
-	const hypot = Math.sqrt(Math.pow(diffX, 2) + Math.pow(diffY, 2));
-
-	wrapper.append('<div class="line" id="' + lineCount + '"></div>');
-
-	const line = $('#' + lineCount);
-	line.css({'width': hypot + 'px'});
-
-	line.css({'left': fromLeft + 'px'});
-	line.css({'top': fromTop + 'px'});
-
-	let theta = 0;
-	if (fromLeft < toLeft)
+	const rightmost = points.sort((a, b) =>
 	{
-		if (fromTop < toTop)
-		{
-			// from is left and below to
-			theta = (Math.atan(diffY / diffX) * (180 / Math.PI));
-		}
+		if (a.left > b.left)
+			return 1;
 		else
-		{
-			// from is left and above to
-			theta = -(Math.atan(diffY / diffX) * (180 / Math.PI));
-		}
+			return -1;
+	})[0];
+
+	const leftmost = points.sort((a, b) =>
+	{
+		if (a.left > b.left)
+			return -1;
+		else
+			return 1;
+	})[0];
+
+	const topmost = points.sort((a, b) =>
+	{
+		if (a.top > b.top)
+			return 1;
+		else
+			return -1;
+	})[0];
+
+	const bottommost = points.sort((a, b) =>
+	{
+		if (a.top > b.top)
+			return 1;
+		else
+			return -1;
+	})[0];
+
+	const middlex = ((rightmost.left - leftmost.left) / 2) + leftmost.left;
+	const middley = ((bottommost.top - topmost.top) / 2) + topmost.top;
+
+	for (let pointIndex = 0; pointIndex < points.length; ++pointIndex)
+	{
+		const p = points[pointIndex];
+		if (p.left > middlex)
+			p.left += step;
+		else
+			p.left -= step;
+
+		if (p.top > middley)
+			p.top += step;
+		else
+			p.top -= step;
+	}
+
+	return points;
+}
+
+function getContractedPoints(step)
+{
+	const rightmost = points.sort((a, b) =>
+	{
+		if (a.left > b.left)
+			return 1;
+		else
+			return -1;
+	})[0];
+
+	const leftmost = points.sort((a, b) =>
+	{
+		if (a.left > b.left)
+			return -1;
+		else
+			return 1;
+	})[0];
+
+	const topmost = points.sort((a, b) =>
+	{
+		if (a.top > b.top)
+			return 1;
+		else
+			return -1;
+	})[0];
+
+	const bottommost = points.sort((a, b) =>
+	{
+		if (a.top > b.top)
+			return 1;
+		else
+			return -1;
+	})[0];
+
+	const middlex = ((rightmost.left - leftmost.left) / 2) + leftmost.left;
+	const middley = ((bottommost.top - topmost.top) / 2) + topmost.top;
+
+	for (let pointIndex = 0; pointIndex < points.length; ++pointIndex)
+	{
+		const p = points[pointIndex];
+		if (p.left > middlex)
+			p.left -= step;
+		else
+			p.left += step;
+
+		if (p.top > middley)
+			p.top -= step;
+		else
+			p.top += step;
+	}
+
+	return points;
+}
+
+function grow()
+{
+	points = getExpandedPoints();
+	generateNet();
+}
+
+let isGrowing = true;
+const duration = 1000;
+let startTime;
+function breathe(time)
+{
+	if (!startTime)
+		startTime = time || performance.now();
+
+	const deltaTime = (time - startTime) / duration;
+
+	if (isGrowing)
+		points = getExpandedPoints(.1);
+	else
+		points = getContractedPoints(.1);
+
+	if (deltaTime >= 1) // ended animation
+	{
+		generateNet();
+		startTime = null;
+		isGrowing = !isGrowing;
+		breathe(undefined);
 	}
 	else
 	{
-		if (fromTop < toTop)
-		{
-			// from is right and below to
-			theta = 180 - (Math.atan(diffY / diffX) * (180 / Math.PI));
-		}
-		else
-		{
-			// from is right and above to
-			theta = 180 + (Math.atan(diffY / diffX) * (180 / Math.PI));
-		}
-	}
-	line.css({'transform': `rotate(${theta}deg)`});
-
-	lineCount++;
-}
-
-function moveDots()
-{
-	let points = $('.point');
-	for (let i = 0; i < points.length; ++i)
-	{
-		const left = Math.random() * 101;
-		const top = Math.random() * 101;
-		$(points[i]).css({'left': left + '%', 'top': top + '%'});
+		generateNet();
+		requestAnimationFrame(breathe);
 	}
 }
 
-function drawLines()
+function draw()
 {
-	let points = $('.point');
-	for (let i = 0; i < points.length; ++i)
-	{
-		const point = $(points[i]);
-		const nearestNeighbors = getNearestNeighbors(point, points);
-
-		for (let neighborDist in nearestNeighbors)
-		{
-			const neighborPoint = $(nearestNeighbors[neighborDist]);
-			drawLineTo(point, neighborPoint);
-		}
-	}
+	points = getRandomPoints(10);
+	generateNet();
+	breathe(undefined);
 }
 
-
-$(document).ready(() =>
-{
-	moveDots();
-	drawLines();
-
-	$('#reload-button').click(() =>
-	{
-		$('.line').remove();
-		lineCount = 0;
-		moveDots();
-		drawLines();
-	});
-});
+draw();
